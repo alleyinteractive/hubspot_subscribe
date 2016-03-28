@@ -21,7 +21,6 @@ class Hubspot_Config {
 			'children' => array(
 				'api_key' => new Fieldmanager_Textfield( __( 'API Key', 'hubspot_subscribe' ) ),
 				'portal_id' => new Fieldmanager_Textfield ( __( 'Portal ID', 'hubspot_subscribe' ) ),
-				'subscription_id' => new Fieldmanager_Textfield( __( 'Subscription ID', 'hubspot_subscribe' ) ),
 				'encryption_key' => new Fieldmanager_Textfield( __( 'Encryption Key', 'hubspot_subscribe' ) ),
 			),
 		) );
@@ -33,10 +32,9 @@ class Hubspot_Config {
 
 		Hubspot_Contacts()->api_key = $settings['api_key'];
 		Hubspot_Contacts()->portal_id = $settings['portal_id'];
-		Hubspot_Contacts()->subscription_id = $settings['subscription_id'];
 		Hubspot_Contacts()->encryption_key = $settings['encryption_key'];
 
-		
+
 	}
 
 	public static function instance() {
