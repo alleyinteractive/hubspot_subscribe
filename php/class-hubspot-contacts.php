@@ -103,21 +103,6 @@ class Hubspot_Contacts {
 	 */
 	public $properties = array(
 		'email' => array( 'label' => 'Email', 'type' => 'email', 'required' => true, 'autofocus' => true ),
-		'firstname' => array( 'label' => 'First Name', 'type' => 'text' ),
-		'lastname' => array( 'label' => 'Last Name', 'type' => 'text' ),
-		'company' => array( 'label' => 'Company', 'type' => 'text' ),
-		'twitterhandle' => array( 'label' => 'Twitter Handle', 'type' => 'text' ),
-		'website' => array( 'label' => 'Website URL', 'type' => 'text' ),
-		'salutation' => array( 'label' => 'Salutation', 'type' => 'text' ),
-		'phone' => array( 'label' => 'Phone', 'type' => 'tel' ),
-		'fax' => array( 'label' => 'Fax', 'type' => 'tel' ),
-		'phonemobile' => array( 'label' => 'Mobile Phone', 'type' => 'tel' ),
-		'phonework' => array( 'label' => 'Work Phone', 'type' => 'tel' ),
-		'address' => array( 'label' => 'Street Address', 'type' => 'text' ),
-		'city' => array( 'label' => 'City', 'type' => 'text' ),
-		'state' => array( 'label' => 'State/Region', 'type' => 'text' ),
-		'zip' => array( 'label' => 'Postal Code', 'type' => 'text' ),
-		'country' => array( 'label' => 'Country', 'type' => 'text' ),
 	);
 
 	/**
@@ -381,6 +366,7 @@ class Hubspot_Contacts {
 		$this->contact_data = array();
 		$properties = apply_filters( 'hubspot_contacts_properties', $this->get_properties_for_post(), 'create' );
 		$response = $this->send_post( 'contact', array( 'properties' => $properties ) );
+
 		if ( $this->is_api_success( $response ) ) {
 			$data = json_decode( wp_remote_retrieve_body( $response ), true );
 

@@ -34,7 +34,6 @@ class Hubspot_Config {
 		Hubspot_Contacts()->portal_id = $settings['portal_id'];
 		Hubspot_Contacts()->encryption_key = $settings['encryption_key'];
 
-
 	}
 
 	public static function instance() {
