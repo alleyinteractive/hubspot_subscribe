@@ -17,6 +17,7 @@ class Hubspot_Contacts {
 
 	const WORKFLOW_SIGNUP = 'signup';
 	const WORKFLOW_UPDATE = 'update';
+	const WORKFLOW_SIGNUP_AND_UPDATE = 'signup_and_update';
 
 	const AJAX_NONCE_NAME = 'hubspot-ajax-validation-nonce';
 	const AJAX_NONCE_PARAM = 'hubpost_ajax_security';
@@ -26,16 +27,7 @@ class Hubspot_Contacts {
 	 *
 	 * @var array $messages
 	 */
-	// public $messages = array(
-	// 	'error' => __( 'Sorry, an error occurred, please try again.', 'hubspot_subscribe' ),
-	// 	'signed_up' => __( 'You\'re already signed up! Please check your inbox for a confirmation message with a link to change your settings.', 'hubspot_subscribe' ),
-	// 	'update_error' => __( 'Failed to update your data, please try again.', 'hubspot_subscribe' ),
-	// 	'signup_error' => __( 'Failed to create your subscription, please try again.', 'hubspot_subscribe' ),
-	// 	'settings_saved' => __( 'Your settings have been saved. <a href="%s">Edit Settings</a>', 'hubspot_subscribe' ),
-	// 	'not_found' => __( 'Your settings could not be found.', 'hubspot_subscribe' ),
-	// 	'opt_out' => __( 'You have opted out of all email subscriptions. To opt back in, use the link in one of the emails you\'ve already received. If you\'ve recently opted back in, please allow 5-10 minutes.', 'hubspot_subscribe' ),
-	// 	'opt_out_error' => __( 'Sorry, an error occurred. Please try again and if the problem persists, contact us.', 'hubspot_subscribe' ),
-	// );
+	public $messages = array();
 
 	/**
 	 * Hubspot API key @link https://app.hubspot.com/keys/get, not the same as Oauth keys.
@@ -157,6 +149,20 @@ class Hubspot_Contacts {
 	public function setup() {
 		global $wp;
 
+		// Adding messages here so we can call __().
+		$messages = array(
+			'error' => __( 'Sorry, an error occurred, please try again.', 'hubspot_subscribe' ),
+			'signed_up' => __( 'You\'re already signed up! Please check your inbox for a confirmation message with a link to change your settings.', 'hubspot_subscribe' ),
+			'update_error' => __( 'Failed to update your data, please try again.', 'hubspot_subscribe' ),
+			'signup_error' => __( 'Failed to create your subscription, please try again.', 'hubspot_subscribe' ),
+			'settings_saved' => __( 'Your settings have been saved. <a href="%s">Edit Settings</a>', 'hubspot_subscribe' ),
+			'not_found' => __( 'Your settings could not be found.', 'hubspot_subscribe' ),
+			'opt_out' => __( 'You have opted out of all email subscriptions. To opt back in, use the link in one of the emails you\'ve already received. If you\'ve recently opted back in, please allow 5-10 minutes.', 'hubspot_subscribe' ),
+			'opt_out_error' => __( 'Sorry, an error occurred. Please try again and if the problem persists, contact us.', 'hubspot_subscribe' ),
+		);
+
+		$this->messages = apply_filters( 'hubspot_contacts_messages', $messages );
+
 		$this->is_initialized = false;
 
 		$wp->add_query_var( 'subscription-id' );
@@ -170,6 +176,8 @@ class Hubspot_Contacts {
 		add_action( 'wp_ajax_nopriv_hubspot_contacts_update', array( $this, 'ajax_handler' ) );
 		add_action( 'wp_ajax_hubspot_contacts_opt_out', array( $this, 'ajax_handler' ) );
 		add_action( 'wp_ajax_nopriv_hubspot_contacts_opt_out', array( $this, 'ajax_handler' ) );
+		add_action( 'wp_ajax_hubspot_contacts_create_and_signup', array( $this, 'ajax_handler' ) );
+		add_action( 'wp_ajax_nopriv_hubspot_contacts_create_and_signup', array( $this, 'ajax_handler' ) );
 	}
 
 	/**
@@ -226,6 +234,9 @@ class Hubspot_Contacts {
 					$this->create_contact( $email );
 				} elseif ( $this->verify_nonce( 'signup' ) ) {
 					$this->check_contact( $email );
+				} elseif ( $this->verify_nonce( 'signup_and_update' ) ) {
+					$this->create_contact( $email, true );
+					$this->status = self::STATUS_SUCCESS;
 				} else {
 					$this->message = $this->messages['error'];
 					$this->status = self::STATUS_SIGNUP;
@@ -360,12 +371,25 @@ class Hubspot_Contacts {
 	 * @param string $email
 	 * @return boolean false if it does not successfully create a contact in the Hubspot API
 	 */
-	protected function create_contact( $email ) {
+	protected function create_contact( $email, $create_or_update = false ) {
 		$this->message = null;
 
 		$this->contact_data = array();
 		$properties = apply_filters( 'hubspot_contacts_properties', $this->get_properties_for_post(), 'create' );
-		$response = $this->send_post( 'contact', array( 'properties' => $properties ) );
+		if ( $create_or_update ) {
+			$email = false;
+			foreach ( $properties as $property ) {
+				if ( $property['property'] == 'email' ) {
+					$email = $property['value'];
+				}
+			}
+			if ( ! $email ) {
+				return false;
+			}
+			$response = $this->send_post( 'contact/createOrUpdate/email/' . $email, array( 'properties' => $properties ) );
+		} else {
+			$response = $this->send_post( 'contact', array( 'properties' => $properties ) );
+		}
 
 		if ( $this->is_api_success( $response ) ) {
 			$data = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -374,7 +398,6 @@ class Hubspot_Contacts {
 				$this->message = sprintf( $this->messages['settings_saved'], add_query_arg( 'subscription-id', $data['vid'], '' ) );
 				$this->status = self::STATUS_SUCCESS;
 				$this->send_workflow( $email, self::WORKFLOW_SIGNUP );
-
 				return true;
 			}
 		}
